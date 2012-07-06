@@ -4,3 +4,4 @@ dnstop
 config.status
 config.log
 config.h
+Makefile
