@@ -1,0 +1,223 @@
+2011/05/02 Duane Wessels
+
+    Anand Buddhev pointed out that LDFLAGS= is missing from Makefile.in.
+    Also updated known_tlds.h.
+
+2011/01/27 Duane Wessels
+
+    Fixed some portability bugs (OpenBSD, gmake 3.82) and other
+    minor bugs.
+
+    Added a feature (-n option) to restrict counting to a given
+    query name.
+
+2011/01/05 Duane Wessels
+
+    Found a fixed a few problems after spending some quality time
+    looking at the code.
+
+    1) Hash table performance was terrible and has been improved.
+       The hash table size is now configurable via command line
+       option.
+
+    2) Some things were double-counted when both -Q and -R were
+       given.
+
+    3) Added cumulative percentage totals to the tables
+
+    4) Added -X option to disable the source+queryname tables, which
+       could consume a lot of memory.
+
+    5) Imported "inX_addr" mini-library for storing IPv4/IPv6
+       addresses.
+
+2010/12/27 Duane Wessels
+
+    Fixed a bug where if stdout was a TTY but stdin was not a TTY,
+    then dnstop would enter a loop on keyboard input and consume
+    100% CPU.  Now it checks that stdin is a TTY as well.
+
+2009/01/28 Duane Wessels
+
+    Added "refused" filter to show only responses that were refused.
+
+2008/03/21 Duane Wessels
+
+    Added some standard Makefile variables that could be locally
+    modified by package maintainers.
+
+    Added -v (version) command line option.
+
+    Updated list of known TLDs.
+
+2008/03/20 Dave Plonka
+
+    Fixed a bug that cause dnstop to Memory fault when processing
+    a DNS packet greater than PCAP_SNAPLEN (previously 1460) bytes
+    in size.
+  
+    Raised PCAP_SNAPLEN to 65535 to avoid truncating large DNS
+    packets.
+  
+    Eliminated unnecessary stack buffers and memcpy calls when
+    handling packets.
+
+2007/05/10 Duane Wessels
+
+    Replaced unlicensed "SuperFastHash" with public domain
+    "lookup3.c" by Bob Jenkins, from
+    http://www.burtleburtle.net/bob/c/lookup3.c
+
+2007/03/02 Duane Wessels
+
+    Added Rcode table
+
+2007/02/20 Duane Wessels
+
+    Internal redesign.  Removed the data structures for storing
+    1st, 2nd, and 3rd level query name stats and replaced them with
+    an array supporting collection of up to 9 domain components.
+    Replaced the -2 and -3 command line options with -l N where N
+    is a number from 1 to 9.  Higher values of N give more details
+    but also use more memory and CPU.
+
+    Rewrote the display code.  Columns are now sized automatically
+    depending on the width of the values being displayed, and the
+    maximum width of the terminal.
+
+2007/02/20 Duane Wessels
+
+    Bugfix: The combined "sources + queryname" tables were counting
+    incorrectly due to the use of in_addr_cmp() in the hash table
+    comparison function.  We no longer store IP addresses as struct
+    in_addr.  We store them as IPv6 addresses and the comparison function
+    always returned 0 for v4 addrs.
+
+2007/02/19 Florian Forster
+
+    Arithmetic on void pointers is not well defined and Solaris
+    complains.  Cast to char pointer instead.
+
+2007/02/19 Dirk Jagdmann
+
+    Added USE_IP6 define so that v6-code can be disabled somewhat
+    easily.
+
+2007/02/19 Florian Forster
+
+    Portability fixes for IPv6-related code as well as some Solaris
+    and Linux quirks.
+
+2007/02/19 Duane Wessels
+
+    Updated rfc1035NameUnpack() and fixed a buffer overflow bug.
+
+2007/02/19 Tom moof Spindler
+
+    There's two more occurences of c99ish "declare local vars in
+    the middle of a block".
+
+2007/01/05 Misc Bugfixes
+
+    Some variables were declared in the middle of functions.  GCC
+    tolerates this, but other compilers (Solaris) do not.
+
+    Bug in switch statement.  break was before return (Bill Richter).
+
+    Added checks for "__GLIBC__" and "__GNU__" preprocessor symbols
+    for Linux compatibility (Petr Salinger).
+
+2006/12/01 Florian Forster and Duane Wessels
+
+    Incorporated Florian's patch to support IPv6.  Both v4 and v6
+    addresses are now stored in an in6_addr structure, which means
+    increased memory usage.  The old default bpf program ("udp dst
+    port 53 and udp[10:2] & 0x8000 = 0") didn't work on IPv6 packets,
+    so it is now just "udp port 53".
+
+    Added -Q and -R command line options to select counting of
+    queries, replies, or both.  The default is to count only queries.
+
+    Added -4 and -6 command line options to select counting of
+    IPv4-addressed messages, IPv6-addressed messages, or both.  The
+    default is to count both.
+
+2006/11/21 Duane Wessels
+
+    Changed most of the linked lists to hash tables.  This should
+    also result in less CPU usage on busy nameservers.
+
+2006/11/20 John Morrissey
+
+    A patch to use setitimer and SIGALRM for updating the display.
+    On busy nameservers this results in less CPU usage because
+    the display is updated less often.  The redraw interval can
+    be specified with the -r command line option.
+
+2006/05/17 Max Horn
+
+    A few fixes for OS X.
+
+    1) select()ing on a pcap FD doesn't always work.  Advice from
+       tcpdump mailing list archive is to put it into non-blocking
+       mode and ignore the select() return value.
+
+    2) Added $(LDFLAGS) to link command line in Makefile to have
+       dnstop linked with specific libraries.  LDFLAGS will be
+       picked up from the environment.
+
+    3) OS X needs to #include <arpa/nameser_compat.h>
+
+2006/04/24 Duane Wessels
+	
+    Adriaan Peeters reported that the list of known TLDs is
+    out-of-date.  In particular, the .EU domain is not in the list.
+	
+2005/04/05 Duane Wessels
+
+    Mark Foster found a bug with the source+SLD list.  It was being
+    updated for 3RD-level domain names as well.  Mark also suggested
+    that the '@' key should display the source+SLD screen, just as
+    '3' and '#' work for 3RD-level.
+
+2005/01/21 Sam Norris
+
+    Added support for third-level domain statistics.  Use the -t
+    command line option to enable collection of 3rd-level stats,
+    and use '3' while running to display them.  Note that enabling
+    3rd-level stats collection does not automatically also enable
+    2nd-level stats.
+
+2005/01/13 Duane Wessels
+
+    Added a non-interactive mode.  If you specify a savefile and
+    stdout is not a TTY, dnstop prints each table at the end.
+
+2004/03/09 Duane Wessels
+
+    Added filter support.  Filters can be used to restrict the input
+    stream to queries with certain characteristics.  The currently
+    defined filters are:
+
+    unknown-tlds        Only includes queries for TLDs that are
+			bogus.  Useful for identifying hosts/servers
+			that leak queries for things like "localhost"
+			or "workgroup."
+
+    A-for-A             Only includes A queries for names that are
+			already IP addresses.  Certain Microsoft
+			Windows DNS servers have a known bug that
+			forward these queries.
+
+    rfc1918-ptr         PTR queries for addresses in RFC1918 space.
+			These should never leak from inside an
+			organization.
+
+2003/11/13 Mark Foster <mark@foster.cc>
+
+    Added 'c' to display options. This screen will combine the
+    source and sld fields to show "who is querying for what" -
+    reason: we see alot of duplicate querys for whatever reason.
+    This will help separate the legitimate queries from the broken
+    resolvers, etc. See http://www.circleid.com/article/102_0_1_0_C/
+    for more about that.

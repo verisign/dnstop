@@ -1,0 +1,6 @@
+dnstop
+*.swp
+*.o
+config.status
+config.log
+config.h

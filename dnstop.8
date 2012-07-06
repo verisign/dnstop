@@ -1,0 +1,220 @@
+.\" $Id: dnstop.8,v 1.27 2011/01/13 21:18:58 wessels Exp $
+.\" 
+.\" manpage written by jose@monkey.org
+.\"
+.Dd 21 March, 2008
+.Dt DNSTOP 8
+.Os
+.Sh NAME
+.Nm dnstop
+.Nd displays various tables of DNS traffic on your network
+.Sh SYNOPSIS
+.Nm
+.Op Fl 46apsQR
+.Op Fl b Ar expression
+.Op Fl i Ar address
+.Op Fl f Ar filter
+.Op Fl r Ar interval
+.Op Ar device
+.Op Ar savefile
+.Sh DESCRIPTION
+.Nm
+is a small tool to listen on
+.Ar device
+or to parse the file
+.Ar savefile
+and collect and print statistics on the local network's DNS traffic. You
+must have read access to 
+.Pa /dev/bpf\&* .
+.Sh COMMAND LINE OPTIONS
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl 4
+count only messages with IPv4 addresses
+.It Fl 6
+count only messages with IPv6 addresses
+.It Fl Q
+count only DNS query messages
+.It Fl R
+count only DNS reply messages
+.It Fl a
+anonymize addresses
+.It Fl b Ar expression
+BPF filter expression
+.br
+(default: udp port 53)
+.It Fl i Ar address
+ignore select addresses
+.It Fl p
+Do not put the interface into promiscuous mode.
+.It Fl r
+Redraw interval (seconds).
+.It Fl l Ar level
+keep counts on names up to
+.Pa level
+domain name levels.
+.Pp
+For example, with -l 2 (the default),
+.Nm
+will keep two tables: one with top-level domain names, and another
+with second-level domain names.  Increasing the
+.Pa level
+provides more details, but also requires more memory and CPU.
+.\"
+.It Fl f
+input filter name
+.Pp
+The "unknown-tlds" filter 
+includes only queries for TLDs that are
+bogus.  Useful for identifying hosts/servers
+that leak queries for things like "localhost"
+or "workgroup."
+.Pp
+The "A-for-A" filter
+includes only A queries for names that are
+already IP addresses.  Certain Microsoft
+Windows DNS servers have a known bug that
+forward these queries.
+.Pp
+The "rfc1918-ptr" filter
+includes only PTR queries for addresses in RFC1918 space.
+These should never leak from inside an
+organization.
+.Pp
+The "refused" filter, when used with the
+.Fl R
+option, tells
+.Nm
+to count only replies with rcode REFUSED.
+.\"
+.It Fl n Ar name
+Only count messages within the domain
+.Ar name
+.It Fl P
+Print "progress" messages on stderr when in non-interactive mode.
+.It Fl B Ar buckets
+Use
+.Pa buckets
+hash table buckets.
+.It Fl X
+Do not tabulate the sources + query name counters.  This can significantly
+reduce memory usage on busy servers and large savefiles.
+.It Ar savefile
+a captured network trace in 
+.Cm pcap
+format
+.It Ar device
+ethernet device (ie fxp0)
+.El
+.Sh RUN TIME OPTIONS
+.Pp
+While running, the following options are available to alter the display:
+.Bl -tag -width Ds
+.It s
+display the source address table
+.It d 
+display the destination address table
+.It t
+display the breakdown of query types seen
+.It r
+display the breakdown of response codes seen
+.It o
+display the breakdown of opcodes seen
+.It 1
+show 1st level query names
+.It 2
+show 2nd level query names
+.It 3
+show 3rd level query names
+.It 4
+show 4th level query names
+.It 5
+show 5th level query names
+.It 6
+show 6th level query names
+.It 7
+show 7th level query names
+.It 8
+show 8th level query names
+.It 9
+show 9th level query names
+.It !
+show sources + 1st level query names
+.It @
+show sources + 2nd level query names
+.It #
+show sources + 3rd level query names
+.It $
+show sources + 4th level query names
+.It %
+show sources + 5th level query names
+.It ^
+show sources + 6th level query names
+.It &
+show sources + 7th level query names
+.It *
+show sources + 8th level query names
+.It (
+show sources + 9th level query names
+.It ^R
+reset the counters
+.It ^X
+exit the program
+.It space
+redraw
+.It ?
+help
+.El
+.Pp 
+.Sh NON-INTERACTIVE MODE
+If stdout is not a tty,
+.Nm
+runs in non-interactive mode.  In this case, you must
+supply a savefile for reading, instead of capturing
+live packets.  After reading the entire savefile,
+.Nm
+prints the top 50 entries for each table.
+.Pp
+.Sh HOW MESSAGES ARE COUNTED
+By default
+.Nm
+examines only query messages and ignores replies.  In this case the response code
+table is meaningless and will likely show 100% "Noerror."
+.Pp
+If you supply (only) the
+.Fl R
+command line option,
+.Nm
+examines replies and ignores queries.  This allows you to see meaningful
+response code values, as well as all the other tables.  In this case
+all the query attributes (such as type and name) are taken from the
+Question section of the reply.
+.Pp
+Note, however, that it is common for a stream of DNS messages to contain
+more queries than replies.
+This could happen, for example,
+if the server is too busy to respond to every single query, or if
+the server is designed to ignore malformed query messages.  Therefore,
+you might want to examine both queries and replies by giving both
+.Fl R
+and
+.Fl Q
+command line options.  In this case, only the response code counts 
+are taken from the replies and all other attributes
+are taken from the queries.
+.Pp
+.Sh AUTHORS
+.Bl -tag -width xx -compact
+.It Pa Duane Wessels (wessels@measurement-factory.com)
+.It Pa Mark Foster (mark@foster.cc)
+.It Pa Jose Nazario (jose@monkey.org)
+.It Pa Sam Norris <@ChangeIP.com>
+.It Pa Max Horn <@quendi.de>
+.It Pa John Morrissey <jwm@horde.net>
+.It Pa Florian Forster <octo@verplant.org>
+.It Pa Dave Plonka <plonka@cs.wisc.edu>
+.It Pa http://dnstop.measurement-factory.com/
+.El
+.Sh BUGS
+Does not support TCP at this time.
