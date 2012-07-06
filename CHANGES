@@ -1,3 +1,7 @@
+2012/07/06 Sean Leach
+
+    Moved to github - see there for all changes
+
 2011/05/02 Duane Wessels
 
     Anand Buddhev pointed out that LDFLAGS= is missing from Makefile.in.
