@@ -1,5 +1,5 @@
 /*
- * $Id: dnstop.c,v 1.108 2011/01/18 22:21:41 wessels Exp $
+ * $Id: dnstop.c,v 1.112 2012/06/11 20:09:22 wessels Exp $
  * 
  * http://dnstop.measurement-factory.com/
  * 
@@ -7,7 +7,7 @@
  * the LICENSE file for details.
  */
 
-static const char *Version = "20110502";
+static const char *Version = "20120611";
 
 #include "config.h"
 
@@ -135,7 +135,7 @@ pcap_t *pcap = NULL;
  */
 char *bpf_program_str = "udp port 53";
 WINDOW *w;
-static unsigned short port53;
+static unsigned short check_port = 0;
 void (*SubReport) (void)= NULL;
 int (*handle_datalink) (const u_char * pkt, int len)= NULL;
 int Quit = 0;
@@ -248,6 +248,8 @@ Filter_t AforAFilter;
 Filter_t RFC1918PtrFilter;
 Filter_t RcodeRefusedFilter;
 Filter_t QnameFilter;
+Filter_t BitsquatFilter;
+Filter_t QtypeAnyFilter;
 Filter_t *Filter = NULL;
 
 unsigned int
@@ -667,7 +669,7 @@ handle_udp(const struct udphdr *udp, int len,
     const inX_addr * src_addr,
     const inX_addr * dst_addr)
 {
-    if (port53 != udp->uh_dport && port53 != udp->uh_sport)
+    if (check_port && check_port != udp->uh_dport && check_port != udp->uh_sport)
 	return 0;
     if (0 == handle_dns((char *)(udp + 1), len - sizeof(*udp), src_addr, dst_addr))
 	return 0;
@@ -1617,6 +1619,57 @@ QnameFilter(FilterData * fd)
     return 0;
 }
 
+const char* BitsquatNames[] = {
+	"FACEBOOK",
+	"GOOGLE",
+	"YAHOO",
+	"YOUTUBE",
+	"BLOGGER",
+	NULL
+};
+
+int
+BitsquatFilter(FilterData * fd)
+{
+    char sld[10];
+    const char *s = QnameToNld(fd->qname, 2);
+    int i;
+    int j;
+    if (0 == s)
+	return 0;
+    strncpy(sld, s, sizeof(sld));
+    sld[sizeof(sld)-1] = 0;
+    if (!strtok(sld, "."))
+	return 0;
+    for (j=0; BitsquatNames[j]; j++)
+	if (0 == strcasecmp(sld, BitsquatNames[j]))
+	    return 0;
+    for (i=0; sld[i]; i++) {
+	int k;
+	int save = sld[i];
+	for (k=0; k<8; k++) {
+	    if (5==k)		// upper/lower case bit
+		continue;
+	    int m = 1<<k;
+	    if (sld[i] & m)
+		sld[i] &= ~m;
+	    else
+		sld[i] |= m;
+	    for (j=0; BitsquatNames[j]; j++)
+		if (0 == strcasecmp(sld, BitsquatNames[j]))
+		    return 1;
+	    sld[i] = save;
+	}
+    }
+    return 0;
+}
+
+int
+QtypeAnyFilter(FilterData *fd)
+{
+	return fd->qtype == T_ANY;
+}
+
 void
 set_filter(const char *fn)
 {
@@ -1630,6 +1683,10 @@ set_filter(const char *fn)
 	Filter = RcodeRefusedFilter;
     else if (0 == strcmp(fn, "qname"))
 	Filter = QnameFilter;
+    else if (0 == strcmp(fn, "bitsquat"))
+	Filter = BitsquatFilter;
+    else if (0 == strcmp(fn, "qtype-any"))
+	Filter = QtypeAnyFilter;
     else
 	Filter = NULL;
 }
@@ -1697,6 +1754,7 @@ usage(void)
     fprintf(stderr, "\t-P\tPrint \"progress\" messages in non-interactive mode\n");
     fprintf(stderr, "\t-r\tRedraw interval, in seconds\n");
     fprintf(stderr, "\t-l N\tEnable domain stats up to N components\n");
+    fprintf(stderr, "\t-X\tDon't tabulate the \"source + query name\" stats\n");
     fprintf(stderr, "\t-f\tfilter-name\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Available filters:\n");
@@ -1704,6 +1762,7 @@ usage(void)
     fprintf(stderr, "\tA-for-A\n");
     fprintf(stderr, "\trfc1918-ptr\n");
     fprintf(stderr, "\trefused\n");
+    fprintf(stderr, "\tqtype-any\n");
     exit(1);
 }
 
@@ -1749,7 +1808,6 @@ main(int argc, char *argv[])
     struct itimerval redraw_itv;
     struct bpf_program fp;
 
-    port53 = htons(53);
     SubReport = Sources_report;
     progname = strdup(strrchr(argv[0], '/') ? strchr(argv[0], '/') + 1 : argv[0]);
     srandom(time(NULL));
@@ -1830,6 +1888,8 @@ main(int argc, char *argv[])
 	usage();
     device = strdup(argv[0]);
 
+    if (!strcasestr(bpf_program_str, "port "))
+    	check_port = htons(53);
     if (0 == opt_count_queries && 0 == opt_count_replies)
 	opt_count_queries = 1;
 

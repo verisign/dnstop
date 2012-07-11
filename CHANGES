@@ -1,6 +1,7 @@
-2012/07/06 Sean Leach
+2012/06/11 Duane Wessels
 
-    Moved to github - see there for all changes
+    Added "qtype-any" filter for displaying ANY queries which are
+    now fashionable in DNS based attacks.
 
 2011/05/02 Duane Wessels
 
